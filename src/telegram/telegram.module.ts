@@ -1,11 +1,12 @@
-import { DataModule } from './../data/data.module';
-import { CommandHandler } from './command.handler';
-import { Module } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { TelegrafModule } from 'nestjs-telegraf/dist/telegraf.module';
-import { CommandReceiver } from './command.receiver';
-import { InjectBot, TelegrafProvider } from 'nestjs-telegraf';
-import { OnApplicationBootstrap } from '@nestjs/common/interfaces/hooks/on-application-bootstrap.interface';
+import { DataModule } from './../data/data.module'
+import { CommandHandler } from './command.handler'
+import { Module } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
+import { TelegrafModule } from 'nestjs-telegraf/dist/telegraf.module'
+import { CommandReceiver } from './command.receiver'
+import { InjectBot, TelegrafProvider } from 'nestjs-telegraf'
+import { OnApplicationBootstrap } from '@nestjs/common/interfaces/hooks/on-application-bootstrap.interface'
+import { AdminNotificationsService } from './admin-notifications.service'
 
 @Module({
   imports: [
@@ -23,8 +24,8 @@ import { OnApplicationBootstrap } from '@nestjs/common/interfaces/hooks/on-appli
     }),
     DataModule,
   ],
-  providers: [CommandReceiver, CommandHandler],
-  exports: [CommandHandler],
+  providers: [CommandReceiver, CommandHandler, AdminNotificationsService],
+  exports: [CommandHandler, AdminNotificationsService],
 })
 export class TelegramModule implements OnApplicationBootstrap {
   constructor(
@@ -32,6 +33,6 @@ export class TelegramModule implements OnApplicationBootstrap {
     @InjectBot() private bot: TelegrafProvider,
   ) {}
   async onApplicationBootstrap() {
-    await this.bot.telegram.setMyCommands(this.receiver.supportedCommands);
+    await this.bot.telegram.setMyCommands(this.receiver.supportedCommands)
   }
 }

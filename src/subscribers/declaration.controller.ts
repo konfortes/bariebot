@@ -1,3 +1,4 @@
+import { AdminNotificationsService } from '../telegram/admin-notifications.service'
 import { Scraper } from './../scraper/scraper'
 import { ConfigService } from '@nestjs/config'
 import { Controller, Post, Req, UnauthorizedException } from '@nestjs/common'
@@ -14,6 +15,7 @@ export class DeclarationController {
     private readonly config: ConfigService,
     private readonly usersStore: UsersStore,
     private readonly scraper: Scraper,
+    private readonly adminNotification: AdminNotificationsService,
   ) {}
   @Post()
   async send(@Req() request: Request): Promise<void> {
@@ -25,14 +27,19 @@ export class DeclarationController {
       throw new UnauthorizedException()
     }
 
+    if (new Date().getDay() > 4) {
+      this.logger.log('not a week day. skipping')
+      return
+    }
+
     try {
       const subscribedUsers = await this.usersStore.getSubscribedUsers()
 
-      // TODO: send declaration
       await Promise.all(
         subscribedUsers.map(async user => {
           try {
             const url = user.declaration_url
+
             await this.scraper.declare(url)
 
             return await this.bot.telegram.sendMessage(
@@ -44,14 +51,16 @@ export class DeclarationController {
               user.external_id,
               'לא הצלחתי לשלוח את הצהרת הבריאות שלך היום.',
             )
-            // TODO: master notification
-            return ex
+
+            throw ex
           }
         }),
       )
     } catch (ex) {
       this.logger.error(`error while sending declaration: ${ex}`)
-      // TODO: master notify
+      await this.adminNotification.notify(
+        `error sending health declaration: ${ex}`,
+      )
     }
   }
 }

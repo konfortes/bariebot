@@ -7,9 +7,10 @@ export default () => ({
   },
   telegram: {
     botToken: process.env.BOT_TOKEN,
+    adminChatId: process.env.TELEGRAM_ADMIN_CHAT_ID,
     webhook: {
       secretPath: process.env.SECRET_WEBHOOK_PATH,
       domain: process.env.WEBHOOK_DOMAIN,
     },
   },
-});
+})

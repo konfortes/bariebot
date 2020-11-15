@@ -1,3 +1,4 @@
+import { AdminNotificationsService } from './admin-notifications.service'
 import { UserEntity } from './entities/user.entity'
 import { Injectable } from '@nestjs/common'
 import { Start, Context, Command, Hears } from 'nestjs-telegraf'
@@ -5,7 +6,10 @@ import { CommandHandler } from './command.handler'
 
 @Injectable()
 export class CommandReceiver {
-  constructor(private readonly commandHandler: CommandHandler) {}
+  constructor(
+    private readonly commandHandler: CommandHandler,
+    private readonly adminNotification: AdminNotificationsService,
+  ) {}
 
   supportedCommands = [
     { command: 'subscribe', description: 'הרשם לשליחת הצהרת בריאות יומית' },
@@ -14,7 +18,6 @@ export class CommandReceiver {
 
   @Start()
   start(ctx: Context) {
-    // ctx.reply('לשלוח כל יום הצהרת בריאות זה מעפן. אני יכול לעזור לך עם זה')
     ctx.reply(
       'לשלוח כל יום הצהרת בריאות זה מעפן. אני יכול לעזור לך עם זה. להרשמה לחץ /subscribe',
     )
@@ -31,13 +34,22 @@ export class CommandReceiver {
   async url(ctx: Context) {
     // TODO: check it is a subscription request
     const user = UserEntity.fromTelegramUser(ctx.from)
-    // TODO: validate url
+
     user.declaration_url = ctx.message.text
+    if (!this.isValidUrl(user.declaration_url)) {
+      await ctx.reply('הקישור ששלחת לא תקין')
+      await this.adminNotification.notify(
+        `got invalid url from user(${user.external_id}): ${user.declaration_url}`,
+      )
+      return
+    }
     try {
       await this.commandHandler.subscribe(user)
     } catch (err) {
       await ctx.reply('נתקלתי בבעיה, לא הצלחתי לרשום אותך')
-      // TODO: send master notification
+      await this.adminNotification.notify(
+        `error subscribing user(${user.external_id}) with url(${user.declaration_url}): ${err}`,
+      )
       return
     }
 
@@ -51,10 +63,23 @@ export class CommandReceiver {
       await this.commandHandler.unsubscribe(user)
     } catch (err) {
       ctx.reply('נתקלתי בבעיה, לא הצלחתי להסיר את ההרשמה שלך')
-      // TODO: send master notification
+      await this.adminNotification.notify(
+        `error unsubscribing user(${user.external_id}): ${err}`,
+      )
       return
     }
 
     await ctx.reply('ביטלתי את ההרשמה שלך. לא אשלח עוד הצהרת בריאות יומית בשמך')
+  }
+
+  private isValidUrl(url: string): boolean {
+    const parsedUrl = new URL(url)
+
+    return (
+      ['http:', 'https:'].includes(parsedUrl.protocol) &&
+      parsedUrl.host == 'il.com4com.com' &&
+      parsedUrl.pathname == '/web/FormShow.aspx' &&
+      parsedUrl.search.includes('MsgStamp')
+    )
   }
 }
