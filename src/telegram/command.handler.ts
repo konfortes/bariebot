@@ -4,12 +4,6 @@ import { Injectable } from '@nestjs/common'
 
 @Injectable()
 export class CommandHandler {
-  MSW_URL = 'https://magicseaweed.com/Hazuk-Beach-Surf-Report/3659/'
-  FORECAST_SELECTOR_TODAY =
-    '#msw-js-fc > div.table-responsive-xs > table > tbody:nth-child(2)'
-  FORECAST_SELECTOR_TOMORROW =
-    '#msw-js-fc > div.table-responsive-xs > table > tbody:nth-child(3)'
-
   constructor(private readonly usersStore: UsersStore) {}
 
   async subscribe(user: UserEntity): Promise<void> {
@@ -25,6 +19,7 @@ export class CommandHandler {
     await this.usersStore.updateSubscription(
       { external_id: user.external_id },
       true,
+      user.declaration_url,
     )
 
     return

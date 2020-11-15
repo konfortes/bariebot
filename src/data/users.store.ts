@@ -13,22 +13,22 @@ export class UsersStore {
   }
 
   async insert(user: UserEntity): Promise<number> {
-    try {
-      const id = await this.knex('users')
-        .insert(user)
-        .returning('id')
+    const id = await this.knex('users')
+      .insert(user)
+      .returning('id')
 
-      return id[0]
-    } catch (ex) {
-      console.log(ex)
-      return 0
-    }
+    return id[0]
   }
 
-  async updateSubscription(where: any, subscription: boolean) {
+  async updateSubscription(where: any, subscription: boolean, url = '') {
+    const update = { subscribed: subscription }
+    if (url.length > 0) {
+      update['declaration_url'] = url
+    }
+
     await this.knex('users')
       .where(where)
-      .update({ subscribed: subscription })
+      .update(update)
   }
 
   async getSubscribedUsers(): Promise<UserEntity[]> {
