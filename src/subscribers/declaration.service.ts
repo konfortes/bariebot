@@ -28,10 +28,10 @@ export class DeclarationService {
         try {
           await this.scraper.declare(user.declaration_url)
 
-          // return await this.bot.telegram.sendMessage(
-          //   user.external_id,
-          //   'שלחתי לך את הצהרת הבריאות!',
-          // )
+          return await this.bot.telegram.sendMessage(
+            user.external_id,
+            'שלחתי לך את הצהרת הבריאות!',
+          )
         } catch (ex) {
           await this.adminNotification.notify(
             `could not send declaration for user(${user.external_id} - ${user.first_name}) ${user.last_name}`,
