@@ -1,66 +1,36 @@
 import { AdminNotificationsService } from '../telegram/admin-notifications.service'
-import { Scraper } from './../scraper/scraper'
 import { ConfigService } from '@nestjs/config'
 import { Controller, Post, Req, UnauthorizedException } from '@nestjs/common'
-import { InjectBot, TelegrafProvider } from 'nestjs-telegraf'
 import { Logger } from 'src/common/logger'
 import { Request } from 'express'
-import { UsersStore } from 'src/data/users.store'
+import { DeclarationService } from './declaration.service'
 
 @Controller('declaration')
 export class DeclarationController {
   constructor(
-    @InjectBot() private bot: TelegrafProvider,
+    private readonly declarationService: DeclarationService,
     private readonly logger: Logger,
     private readonly config: ConfigService,
-    private readonly usersStore: UsersStore,
-    private readonly scraper: Scraper,
     private readonly adminNotification: AdminNotificationsService,
   ) {}
   @Post()
   async send(@Req() request: Request): Promise<void> {
     // TODO: move to middleware
-    const authHeader = request.headers['authorization']
-
-    const apiToken = this.config.get<string>('apiToken')
-    if (authHeader != `Basic ${apiToken}`) {
-      throw new UnauthorizedException()
-    }
-
-    if (new Date().getDay() > 4) {
-      this.logger.log('not a week day. skipping')
-      return
-    }
+    this.auth(request.headers['authorization'])
 
     try {
-      const subscribedUsers = await this.usersStore.getSubscribedUsers()
+      await this.declarationService.send()
+    } catch (err) {
+      const msg = `Error while sending declarations: ${err}`
+      this.logger.error(msg)
+      this.adminNotification.notify(msg)
+    }
+  }
 
-      await Promise.all(
-        subscribedUsers.map(async user => {
-          try {
-            const url = user.declaration_url
-
-            await this.scraper.declare(url)
-
-            return await this.bot.telegram.sendMessage(
-              user.external_id,
-              'שלחתי לך את הצהרת הבריאות!',
-            )
-          } catch (ex) {
-            await this.bot.telegram.sendMessage(
-              user.external_id,
-              'לא הצלחתי לשלוח את הצהרת הבריאות שלך היום.',
-            )
-
-            throw ex
-          }
-        }),
-      )
-    } catch (ex) {
-      this.logger.error(`error while sending declaration: ${ex}`)
-      await this.adminNotification.notify(
-        `error sending health declaration: ${ex}`,
-      )
+  private auth(authToken: string) {
+    const apiToken = this.config.get<string>('apiToken')
+    if (authToken != `Basic ${apiToken}`) {
+      throw new UnauthorizedException()
     }
   }
 }
