@@ -28,7 +28,7 @@ export class DeclarationService {
         try {
           await this.scraper.declare(user.declaration_url)
 
-          return await this.bot.telegram.sendMessage(
+          await this.bot.telegram.sendMessage(
             user.external_id,
             'שלחתי לך את הצהרת הבריאות!',
           )
