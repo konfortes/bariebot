@@ -28,11 +28,8 @@ export class UserEntity {
   created_at: Date
 
   static fromTelegramUser(user: User): UserEntity {
-    return new UserEntity(
-      user.id,
-      user.first_name,
-      user.last_name,
-      user.username,
-    )
+    const { id, first_name, last_name, username } = user
+
+    return new UserEntity(id, first_name, last_name, username)
   }
 }

@@ -1,3 +1,4 @@
+import { UsersStore } from './../data/users.store'
 import { AdminNotificationsService } from './admin-notifications.service'
 import { UserEntity } from './entities/user.entity'
 import { Injectable } from '@nestjs/common'
@@ -9,6 +10,7 @@ export class CommandReceiver {
   constructor(
     private readonly commandHandler: CommandHandler,
     private readonly adminNotification: AdminNotificationsService,
+    private readonly userStore: UsersStore,
   ) {}
 
   supportedCommands = [
@@ -25,7 +27,21 @@ export class CommandReceiver {
 
   @Command('subscribe')
   async subscribe(ctx: Context) {
-    ctx.reply('שלח לי את הקישור להרשמה האישית שלך')
+    const existingUser = await this.userStore.getByExternalId(ctx.from.id)
+
+    if (existingUser && existingUser.subscribed) {
+      await ctx.reply('אתה כבר רשום. אם ברצונך לעדכן קישור שלח אותו כעת')
+      return
+    }
+
+    if (existingUser && !existingUser.subscribed) {
+      await ctx.reply('שלח לי את הקישור להרשמה האישית שלך')
+      return
+    }
+
+    // no existing user
+    await this.userStore.insert(UserEntity.fromTelegramUser(ctx.from))
+    await ctx.reply('שלח לי את הקישור להרשמה האישית שלך')
   }
 
   @Hears(
@@ -33,16 +49,17 @@ export class CommandReceiver {
   )
   async url(ctx: Context) {
     // TODO: check it is a subscription request
-    const user = UserEntity.fromTelegramUser(ctx.from)
 
-    user.declaration_url = ctx.message.text
-    if (!this.isValidUrl(user.declaration_url)) {
+    if (!this.isValidUrl(ctx.message.text)) {
       await ctx.reply('הקישור ששלחת לא תקין')
       await this.adminNotification.notify(
-        `got invalid url from user(${user.external_id}): ${user.declaration_url}`,
+        `got invalid url from user(${ctx.from.id} - ${ctx.from.first_name}): ${ctx.message.text}`,
       )
       return
     }
+
+    const user = UserEntity.fromTelegramUser(ctx.from)
+    user.declaration_url = ctx.message.text
     try {
       await this.commandHandler.subscribe(user)
     } catch (err) {
