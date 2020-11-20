@@ -1,6 +1,4 @@
-import { UsersStore } from './../data/users.store'
 import { AdminNotificationsService } from './admin-notifications.service'
-import { UserEntity } from './entities/user.entity'
 import { Injectable } from '@nestjs/common'
 import { Start, Context, Command, Hears } from 'nestjs-telegraf'
 import { CommandHandler } from './command.handler'
@@ -10,7 +8,6 @@ export class CommandReceiver {
   constructor(
     private readonly commandHandler: CommandHandler,
     private readonly adminNotification: AdminNotificationsService,
-    private readonly userStore: UsersStore,
   ) {}
 
   supportedCommands = [
@@ -19,7 +16,15 @@ export class CommandReceiver {
   ]
 
   @Start()
-  start(ctx: Context) {
+  async start(ctx: Context) {
+    try {
+      await this.commandHandler.start(ctx.from)
+    } catch (err) {
+      this.adminNotification.notify(
+        `could not create new user(${ctx.from.id}): ${err}`,
+      )
+    }
+
     ctx.reply(
       'לשלוח כל יום הצהרת בריאות זה מעפן. אני יכול לעזור לך עם זה. להרשמה לחץ /subscribe',
     )
@@ -27,21 +32,13 @@ export class CommandReceiver {
 
   @Command('subscribe')
   async subscribe(ctx: Context) {
-    const existingUser = await this.userStore.getByExternalId(ctx.from.id)
-
-    if (existingUser && existingUser.subscribed) {
-      await ctx.reply('אתה כבר רשום. אם ברצונך לעדכן קישור שלח אותו כעת')
-      return
+    try {
+      await this.commandHandler.subscribe(ctx)
+    } catch (err) {
+      await this.adminNotification.notify(
+        `error while subscribing user(${ctx.from.id}): ${err}`,
+      )
     }
-
-    if (existingUser && !existingUser.subscribed) {
-      await ctx.reply('שלח לי את הקישור להרשמה האישית שלך')
-      return
-    }
-
-    // no existing user
-    await this.userStore.insert(UserEntity.fromTelegramUser(ctx.from))
-    await ctx.reply('שלח לי את הקישור להרשמה האישית שלך')
   }
 
   @Hears(
@@ -58,35 +55,26 @@ export class CommandReceiver {
       return
     }
 
-    const user = UserEntity.fromTelegramUser(ctx.from)
-    user.declaration_url = ctx.message.text
     try {
-      await this.commandHandler.subscribe(user)
+      await this.commandHandler.url(ctx, ctx.message.text)
     } catch (err) {
-      await ctx.reply('נתקלתי בבעיה, לא הצלחתי לרשום אותך')
+      await ctx.reply('נתקלתי בבעיה, לא הצלחתי לרשום אותך. נסה שוב מאוחר יותר')
       await this.adminNotification.notify(
-        `error subscribing user(${user.external_id}) with url(${user.declaration_url}): ${err}`,
+        `Error while persisting url for user(${ctx.from.id}): ${err}`,
       )
-      return
     }
-
-    await ctx.reply('רשמתי. אשלח בשמך הצהרת בריאות בכל יום')
   }
 
   @Command('unsubscribe')
   async unsubscribe(ctx: Context) {
-    const user = UserEntity.fromTelegramUser(ctx.from)
     try {
-      await this.commandHandler.unsubscribe(user)
+      await this.commandHandler.unsubscribe(ctx)
     } catch (err) {
       ctx.reply('נתקלתי בבעיה, לא הצלחתי להסיר את ההרשמה שלך')
       await this.adminNotification.notify(
-        `error unsubscribing user(${user.external_id}): ${err}`,
+        `error unsubscribing user(${ctx.from.id}): ${err}`,
       )
-      return
     }
-
-    await ctx.reply('ביטלתי את ההרשמה שלך. לא אשלח עוד הצהרת בריאות יומית בשמך')
   }
 
   private isValidUrl(url: string): boolean {

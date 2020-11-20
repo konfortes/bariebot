@@ -1,33 +1,63 @@
+import { User as TelegramUser } from 'telegram-typings'
 import { UsersStore } from '../data/users.store'
 import { UserEntity } from './entities/user.entity'
 import { Injectable } from '@nestjs/common'
+import { Context } from 'nestjs-telegraf'
 
 @Injectable()
 export class CommandHandler {
   constructor(private readonly usersStore: UsersStore) {}
 
-  async subscribe(user: UserEntity): Promise<void> {
-    const existingUser = await this.usersStore.getByExternalId(user.external_id)
+  async start(user: TelegramUser): Promise<void> {
+    const userEntity = UserEntity.fromTelegramUser(user)
 
+    await this.usersStore.insert(userEntity)
+  }
+
+  async subscribe(ctx: Context): Promise<void> {
+    let existingUser = await this.usersStore.getByExternalId(ctx.from.id)
+
+    // this should not happen. users are created on Start event
     if (!existingUser) {
-      user.subscribed = true
-      await this.usersStore.insert(user)
+      await this.usersStore.insert(UserEntity.fromTelegramUser(ctx.from))
+      existingUser = await this.usersStore.getByExternalId(ctx.from.id)
+    }
+
+    if (!existingUser.declaration_url) {
+      await ctx.reply('שלח לי את הקישור להרשמה האישית שלך')
 
       return
     }
 
+    if (existingUser.subscribed) {
+      await ctx.reply('אתה כבר רשום. אם ברצונך לעדכן קישור שלח אותו כעת')
+
+      return
+    }
+
+    if (!existingUser.subscribed) {
+      this.usersStore.updateSubscription(
+        { external_id: existingUser.external_id },
+        true,
+      )
+    }
+  }
+
+  async url(ctx: Context, url: string): Promise<void> {
     await this.usersStore.updateSubscription(
-      { external_id: user.external_id },
+      { external_id: ctx.from.id },
       true,
-      user.declaration_url,
+      url,
     )
 
-    return
+    await ctx.reply('רשמתי. אשלח בשמך הצהרת בריאות בכל יום')
   }
-  async unsubscribe(user: UserEntity): Promise<void> {
+  async unsubscribe(ctx: Context): Promise<void> {
     await this.usersStore.updateSubscription(
-      { external_id: user.external_id },
+      { external_id: ctx.from.id },
       false,
     )
+
+    await ctx.reply('ביטלתי את ההרשמה שלך. לא אשלח עוד הצהרת בריאות יומית בשמך')
   }
 }
