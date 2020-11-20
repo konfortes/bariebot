@@ -36,10 +36,11 @@ export class CommandHandler {
     }
 
     if (!existingUser.subscribed) {
-      this.usersStore.updateSubscription(
+      await this.usersStore.updateSubscription(
         { external_id: existingUser.external_id },
         true,
       )
+      await ctx.reply('רשמתי. אשלח בשמך הצהרת בריאות בכל יום')
     }
   }
 
