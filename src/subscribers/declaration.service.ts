@@ -26,11 +26,11 @@ export class DeclarationService {
       // TODO: had some trouble running it in parallel on Heroku, that's why I changed it to run each user synchronously
       for (const user of subscribedUsers) {
         try {
-          await this.scraper.declare(user.declaration_url)
+          const approvalUrl = await this.scraper.declare(user.declaration_url)
 
           await this.bot.telegram.sendMessage(
             user.external_id,
-            'שלחתי לך את הצהרת הבריאות!',
+            'שלחתי לך את הצהרת הבריאות! הנה האישור:' + approvalUrl,
           )
         } catch (ex) {
           await this.adminNotification.notify(

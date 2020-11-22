@@ -5,7 +5,7 @@ import { Logger } from '../common/logger'
 @Injectable()
 export class Scraper {
   constructor(private readonly logger: Logger) {}
-  async declare(url: string) {
+  async declare(url: string): Promise<string> {
     const browser = await puppeteer.launch({
       headless: true,
       args: [
@@ -29,7 +29,9 @@ export class Scraper {
         await page.click(id, { delay: 20 })
       }
 
-      return await page.click('#sendBtn', { delay: 30 })
+      await page.click('#sendBtn', { delay: 30 })
+
+      return await page.$eval('#linkLabel', el => el.textContent)
     } catch (ex) {
       this.logger.error(`scrape failed: ${ex}`)
       throw ex
