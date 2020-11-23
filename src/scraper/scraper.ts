@@ -29,9 +29,9 @@ export class Scraper {
         await page.click(id, { delay: 20 })
       }
 
-      await page.waitForSelector('#sendBtn')
-
       await page.click('#sendBtn', { delay: 30 })
+
+      await page.waitForSelector('#linkLabel')
 
       return await page.$eval('#linkLabel', el => el.textContent)
     } catch (ex) {

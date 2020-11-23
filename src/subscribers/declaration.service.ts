@@ -34,7 +34,9 @@ export class DeclarationService {
           )
         } catch (ex) {
           await this.adminNotification.notify(
-            `could not send declaration for user(${user.external_id} - ${user.first_name}) ${user.last_name}`,
+            `could not send declaration for user(${user.external_id} - ${
+              user.first_name
+            } ${user.last_name ? user.last_name : ''})`,
           )
           await this.bot.telegram.sendMessage(
             user.external_id,
