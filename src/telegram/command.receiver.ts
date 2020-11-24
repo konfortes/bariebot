@@ -80,11 +80,19 @@ export class CommandReceiver {
   private isValidUrl(url: string): boolean {
     const parsedUrl = new URL(url)
 
-    return (
+    const oldUrlMatch =
       ['http:', 'https:'].includes(parsedUrl.protocol) &&
       parsedUrl.host == 'il.com4com.com' &&
       parsedUrl.pathname == '/web/FormShow.aspx' &&
       parsedUrl.search.includes('MsgStamp')
-    )
+
+    const newUrlMatch =
+      ['http:', 'https:'].includes(parsedUrl.protocol) &&
+      parsedUrl.host == 'il.com4com.com' &&
+      parsedUrl.pathname == '/u' &&
+      parsedUrl.search.includes('?') &&
+      parsedUrl.search.length > 3
+
+    return oldUrlMatch || newUrlMatch
   }
 }
