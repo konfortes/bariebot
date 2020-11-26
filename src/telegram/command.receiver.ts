@@ -1,7 +1,7 @@
 import { AdminNotificationsService } from './admin-notifications.service'
 import { Injectable } from '@nestjs/common'
 import { Start, Context, Command, Hears } from 'nestjs-telegraf'
-import { CommandHandler } from './command.handler'
+import { CommandHandler, SubscribeResult } from './command.handler'
 
 @Injectable()
 export class CommandReceiver {
@@ -33,7 +33,24 @@ export class CommandReceiver {
   @Command('subscribe')
   async subscribe(ctx: Context) {
     try {
-      await this.commandHandler.subscribe(ctx)
+      const subscribeResult = await this.commandHandler.subscribe(ctx.from)
+
+      switch (subscribeResult) {
+        case SubscribeResult.NO_URL:
+          await ctx.reply('שלח לי את הקישור להרשמה האישית שלך')
+          break
+        case SubscribeResult.URL_EXISTS:
+          await ctx.reply('אתה כבר רשום. אם ברצונך לעדכן קישור שלח אותו כעת')
+          break
+        case SubscribeResult.UNSUBSCRIBED:
+          await ctx.reply('רשמתי. אשלח בשמך הצהרת בריאות בכל יום')
+          break
+        default:
+          await this.adminNotification.notify(
+            `Got unknown subscription response (${subscribeResult}) from CommandHandler while trying to subscribe user(${ctx.from.id})`,
+          )
+          break
+      }
     } catch (err) {
       await this.adminNotification.notify(
         `error while subscribing user(${ctx.from.id}): ${err}`,
@@ -56,7 +73,8 @@ export class CommandReceiver {
     }
 
     try {
-      await this.commandHandler.url(ctx, ctx.message.text)
+      await this.commandHandler.url(ctx.from, ctx.message.text)
+      await ctx.reply('רשמתי. אשלח בשמך הצהרת בריאות בכל יום')
     } catch (err) {
       await ctx.reply('נתקלתי בבעיה, לא הצלחתי לרשום אותך. נסה שוב מאוחר יותר')
       await this.adminNotification.notify(
@@ -68,7 +86,10 @@ export class CommandReceiver {
   @Command('unsubscribe')
   async unsubscribe(ctx: Context) {
     try {
-      await this.commandHandler.unsubscribe(ctx)
+      await this.commandHandler.unsubscribe(ctx.from)
+      await ctx.reply(
+        'ביטלתי את ההרשמה שלך. לא אשלח עוד הצהרת בריאות יומית בשמך',
+      )
     } catch (err) {
       ctx.reply('נתקלתי בבעיה, לא הצלחתי להסיר את ההרשמה שלך')
       await this.adminNotification.notify(

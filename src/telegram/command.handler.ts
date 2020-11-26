@@ -2,7 +2,12 @@ import { User as TelegramUser } from 'telegram-typings'
 import { UsersStore } from '../data/users.store'
 import { UserEntity } from './entities/user.entity'
 import { Injectable } from '@nestjs/common'
-import { Context } from 'nestjs-telegraf'
+
+export enum SubscribeResult {
+  NO_URL = 0,
+  URL_EXISTS,
+  UNSUBSCRIBED,
+}
 
 @Injectable()
 export class CommandHandler {
@@ -14,25 +19,21 @@ export class CommandHandler {
     await this.usersStore.insert(userEntity)
   }
 
-  async subscribe(ctx: Context): Promise<void> {
-    let existingUser = await this.usersStore.getByExternalId(ctx.from.id)
+  async subscribe(user: TelegramUser): Promise<SubscribeResult> {
+    let existingUser = await this.usersStore.getByExternalId(user.id)
 
     // this should not happen. users are created on Start event
     if (!existingUser) {
-      await this.usersStore.insert(UserEntity.fromTelegramUser(ctx.from))
-      existingUser = await this.usersStore.getByExternalId(ctx.from.id)
+      await this.usersStore.insert(UserEntity.fromTelegramUser(user))
+      existingUser = await this.usersStore.getByExternalId(user.id)
     }
 
     if (!existingUser.declaration_url) {
-      await ctx.reply('שלח לי את הקישור להרשמה האישית שלך')
-
-      return
+      return SubscribeResult.NO_URL
     }
 
     if (existingUser.subscribed) {
-      await ctx.reply('אתה כבר רשום. אם ברצונך לעדכן קישור שלח אותו כעת')
-
-      return
+      return SubscribeResult.URL_EXISTS
     }
 
     if (!existingUser.subscribed) {
@@ -40,25 +41,22 @@ export class CommandHandler {
         { external_id: existingUser.external_id },
         true,
       )
-      await ctx.reply('רשמתי. אשלח בשמך הצהרת בריאות בכל יום')
+
+      return SubscribeResult.UNSUBSCRIBED
     }
   }
 
-  async url(ctx: Context, url: string): Promise<void> {
-    await this.usersStore.updateSubscription(
-      { external_id: ctx.from.id },
+  async url(user: TelegramUser, url: string): Promise<void> {
+    return await this.usersStore.updateSubscription(
+      { external_id: user.id },
       true,
       url,
     )
-
-    await ctx.reply('רשמתי. אשלח בשמך הצהרת בריאות בכל יום')
   }
-  async unsubscribe(ctx: Context): Promise<void> {
-    await this.usersStore.updateSubscription(
-      { external_id: ctx.from.id },
+  async unsubscribe(user: TelegramUser): Promise<void> {
+    return await this.usersStore.updateSubscription(
+      { external_id: user.id },
       false,
     )
-
-    await ctx.reply('ביטלתי את ההרשמה שלך. לא אשלח עוד הצהרת בריאות יומית בשמך')
   }
 }
