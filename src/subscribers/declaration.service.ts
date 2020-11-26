@@ -28,6 +28,11 @@ export class DeclarationService {
         try {
           const approvalUrl = await this.scraper.declare(user.declaration_url)
 
+          if (process.env.MUTE_NOTIFICATIONS == 'true') {
+            this.logger.warn('Notifications are muted')
+            return
+          }
+
           await this.bot.telegram.sendMessage(
             user.external_id,
             'שלחתי לך את הצהרת הבריאות! הנה האישור:' + approvalUrl,
@@ -38,6 +43,12 @@ export class DeclarationService {
               user.first_name
             } ${user.last_name ? user.last_name : ''})`,
           )
+
+          if (process.env.MUTE_NOTIFICATIONS == 'true') {
+            this.logger.warn('Notifications are muted')
+            return
+          }
+
           await this.bot.telegram.sendMessage(
             user.external_id,
             'לא הצלחתי לשלוח את הצהרת הבריאות שלך היום.',
