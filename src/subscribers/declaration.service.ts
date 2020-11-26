@@ -33,18 +33,13 @@ export class DeclarationService {
 
           const approvalUrl = await this.scraper.sendDeclaration(link.value)
 
-          if (process.env.MUTE_NOTIFICATIONS == 'true') {
-            this.logger.warn('Notifications are muted')
-            return
-          }
-
           const msg =
             'שלחתי את הצהרת הבריאות של ' +
             link.name +
             '. ' +
             'הנה האישור:' +
             approvalUrl
-          await this.bot.telegram.sendMessage(user.external_id, msg)
+          await this.bot.telegram.sendMessage(616941509, msg)
         } catch (ex) {
           await this.adminNotification.notify(
             `could not send declaration for user(${user.external_id} - ${
@@ -52,13 +47,8 @@ export class DeclarationService {
             } ${user.last_name ? user.last_name : ''})`,
           )
 
-          if (process.env.MUTE_NOTIFICATIONS == 'true') {
-            this.logger.warn('Notifications are muted')
-            return
-          }
-
           await this.bot.telegram.sendMessage(
-            user.external_id,
+            616941509,
             'לא הצלחתי לשלוח את הצהרת הבריאות שלך היום.',
           )
         }
