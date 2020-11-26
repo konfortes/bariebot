@@ -1,7 +1,8 @@
-import { ConfigService } from '@nestjs/config';
-import { Module } from '@nestjs/common';
-import { KnexModule } from 'nestjs-knex';
-import { UsersStore } from './users.store';
+import { LinksRepository } from './links.repository'
+import { ConfigService } from '@nestjs/config'
+import { Module } from '@nestjs/common'
+import { KnexModule } from 'nestjs-knex'
+import { UsersRepository } from './users.repository'
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { UsersStore } from './users.store';
       }),
     }),
   ],
-  providers: [UsersStore],
-  exports: [UsersStore],
+  providers: [UsersRepository, LinksRepository],
+  exports: [UsersRepository, LinksRepository],
 })
 export class DataModule {}

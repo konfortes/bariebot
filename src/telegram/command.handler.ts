@@ -1,6 +1,8 @@
+import { LinksRepository } from './../data/links.repository'
+import { Scraper } from './../scraper/scraper'
 import { User as TelegramUser } from 'telegram-typings'
-import { UsersStore } from '../data/users.store'
-import { UserEntity } from './entities/user.entity'
+import { UsersRepository } from '../data/users.repository'
+import { UserEntity } from '../data/entities/user.entity'
 import { Injectable } from '@nestjs/common'
 
 export enum SubscribeResult {
@@ -11,34 +13,34 @@ export enum SubscribeResult {
 
 @Injectable()
 export class CommandHandler {
-  constructor(private readonly usersStore: UsersStore) {}
+  constructor(
+    private readonly usersRepo: UsersRepository,
+    private readonly linksRepo: LinksRepository,
+    private readonly scraper: Scraper,
+  ) {}
 
   async start(user: TelegramUser): Promise<void> {
-    const userEntity = UserEntity.fromTelegramUser(user)
-
-    await this.usersStore.insert(userEntity)
+    await this.usersRepo.insert(UserEntity.fromTelegramUser(user))
   }
 
-  async subscribe(user: TelegramUser): Promise<SubscribeResult> {
-    let existingUser = await this.usersStore.getByExternalId(user.id)
+  async subscribe(telegramUser: TelegramUser): Promise<SubscribeResult> {
+    const user = await this.usersRepo.getOrCreate(
+      UserEntity.fromTelegramUser(telegramUser),
+    )
 
-    // this should not happen. users are created on Start event
-    if (!existingUser) {
-      await this.usersStore.insert(UserEntity.fromTelegramUser(user))
-      existingUser = await this.usersStore.getByExternalId(user.id)
-    }
+    const existingLink = await this.linksRepo.getByUserId(user.id)
 
-    if (!existingUser.declaration_url) {
+    if (!existingLink) {
       return SubscribeResult.NO_URL
     }
 
-    if (existingUser.subscribed) {
+    if (user.subscribed) {
       return SubscribeResult.URL_EXISTS
     }
 
-    if (!existingUser.subscribed) {
-      await this.usersStore.updateSubscription(
-        { external_id: existingUser.external_id },
+    if (!user.subscribed) {
+      await this.usersRepo.updateSubscription(
+        { external_id: user.external_id },
         true,
       )
 
@@ -46,17 +48,19 @@ export class CommandHandler {
     }
   }
 
-  async url(user: TelegramUser, url: string): Promise<void> {
-    return await this.usersStore.updateSubscription(
-      { external_id: user.id },
-      true,
-      url,
+  async url(telegramUser: TelegramUser, declareUrl: string): Promise<void> {
+    const user = await this.usersRepo.getOrCreate(
+      UserEntity.fromTelegramUser(telegramUser),
     )
+
+    const name = await this.scraper.scrapeName(declareUrl)
+
+    await this.linksRepo.upsertLink(user.id, declareUrl, name)
+
+    this.usersRepo.updateSubscription({ id: user.id }, true)
   }
-  async unsubscribe(user: TelegramUser): Promise<void> {
-    return await this.usersStore.updateSubscription(
-      { external_id: user.id },
-      false,
-    )
+
+  unsubscribe(user: TelegramUser): Promise<void> {
+    return this.usersRepo.updateSubscription({ external_id: user.id }, false)
   }
 }
