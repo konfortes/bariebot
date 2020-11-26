@@ -1,3 +1,4 @@
+import { ScraperModule } from './../scraper/scraper.module'
 import { DataModule } from './../data/data.module'
 import { CommandHandler } from './command.handler'
 import { Module } from '@nestjs/common'
@@ -23,6 +24,7 @@ import { AdminNotificationsService } from './admin-notifications.service'
       inject: [ConfigService],
     }),
     DataModule,
+    ScraperModule,
   ],
   providers: [CommandReceiver, CommandHandler, AdminNotificationsService],
   exports: [CommandHandler, AdminNotificationsService],

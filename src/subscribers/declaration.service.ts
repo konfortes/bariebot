@@ -1,6 +1,7 @@
+import { LinksRepository } from './../data/links.repository'
 import { AdminNotificationsService } from './../telegram/admin-notifications.service'
 import { Scraper } from './../scraper/scraper'
-import { UsersStore } from './../data/users.store'
+import { UsersRepository } from '../data/users.repository'
 import { Injectable } from '@nestjs/common'
 import { Logger } from 'src/common/logger'
 import { InjectBot, TelegrafProvider } from 'nestjs-telegraf'
@@ -9,7 +10,8 @@ import { InjectBot, TelegrafProvider } from 'nestjs-telegraf'
 export class DeclarationService {
   constructor(
     private readonly logger: Logger,
-    private readonly usersStore: UsersStore,
+    private readonly usersRepo: UsersRepository,
+    private readonly linksRepo: LinksRepository,
     private readonly scraper: Scraper,
     @InjectBot() private bot: TelegrafProvider,
     private readonly adminNotification: AdminNotificationsService,
@@ -21,22 +23,28 @@ export class DeclarationService {
     }
 
     try {
-      const subscribedUsers = await this.usersStore.getSubscribedUsers()
+      // TODO: join links to avoid n+1 queries
+      const subscribedUsers = await this.usersRepo.getSubscribedUsers()
 
       // TODO: had some trouble running it in parallel on Heroku, that's why I changed it to run each user synchronously
       for (const user of subscribedUsers) {
         try {
-          const approvalUrl = await this.scraper.declare(user.declaration_url)
+          const link = await this.linksRepo.getByUserId(user.id)
+
+          const approvalUrl = await this.scraper.sendDeclaration(link.value)
 
           if (process.env.MUTE_NOTIFICATIONS == 'true') {
             this.logger.warn('Notifications are muted')
             return
           }
 
-          await this.bot.telegram.sendMessage(
-            user.external_id,
-            'שלחתי לך את הצהרת הבריאות! הנה האישור:' + approvalUrl,
-          )
+          const msg =
+            'שלחתי את הצהרת הבריאות של ' +
+            link.name +
+            '. ' +
+            'הנה האישור:' +
+            approvalUrl
+          await this.bot.telegram.sendMessage(user.external_id, msg)
         } catch (ex) {
           await this.adminNotification.notify(
             `could not send declaration for user(${user.external_id} - ${

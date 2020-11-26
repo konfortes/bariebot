@@ -7,7 +7,6 @@ export class UserEntity {
   last_name?: string
   username?: string
   subscribed: boolean
-  declaration_url: string
   created_at: Date
 
   constructor(
@@ -16,7 +15,6 @@ export class UserEntity {
     last: string,
     username: string,
     subscribed = false,
-    declarationUrl = '',
     createdAt: Date = new Date(),
   ) {
     this.external_id = externalId
@@ -24,7 +22,6 @@ export class UserEntity {
     this.last_name = last
     this.username = username
     this.subscribed = subscribed
-    this.declaration_url = declarationUrl
     this.created_at = createdAt
   }
 
