@@ -1,5 +1,5 @@
-import { LinksRepository } from './../data/links.repository'
-import { AdminNotificationsService } from './../telegram/admin-notifications.service'
+import { LinksRepository } from '../data/links.repository'
+import { AdminNotificationsService } from '../telegram/admin-notifications.service'
 import { Scraper } from '../scraping/scraper'
 import { UsersRepository } from '../data/users.repository'
 import { Inject, Injectable } from '@nestjs/common'
@@ -7,18 +7,19 @@ import { Logger } from 'winston'
 import { InjectBot, TelegrafProvider } from 'nestjs-telegraf'
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston'
 import { UserEntity } from 'src/data/entities/user.entity'
+// import { NR_AGENT } from 'src/consts'
 
 @Injectable()
-export class DeclarationService {
+export class StatementService {
   constructor(
     @Inject(WINSTON_MODULE_PROVIDER) private logger: Logger,
     private readonly usersRepo: UsersRepository,
     private readonly linksRepo: LinksRepository,
     private readonly scraper: Scraper,
     @InjectBot() private bot: TelegrafProvider,
-    private readonly adminNotification: AdminNotificationsService,
+    private readonly adminNotification: AdminNotificationsService, // @Inject(NR_AGENT) private metricsAgent,
   ) {
-    this.logger = logger.child({ loggerName: DeclarationService.name })
+    this.logger = logger.child({ loggerName: StatementService.name })
   }
 
   async send() {
@@ -31,26 +32,40 @@ export class DeclarationService {
       // TODO: join links to avoid n+1 queries
       const subscribedUsers = await this.usersRepo.getSubscribedUsers()
 
-      // TODO: had some trouble running it in parallel on Heroku something with concurrent connections limitation, that's why I changed it to run each user synchronously
+      // TODO: had some trouble running it in parallel on Heroku, something with concurrent connections limitation, that's why I changed it to run each user synchronously
       for (const user of subscribedUsers) {
         try {
           const link = await this.linksRepo.getByUserId(user.id)
 
-          const approvalUrl = await this.scraper.sendDeclaration(link.value)
+          const statementApprovalUrl = await this.scraper.sendHealthStatement(
+            link.value,
+          )
 
-          const msg = this.approvalMessage(link.name, approvalUrl)
-
-          await this.sendTelegramMessage(user.external_id, msg)
+          await this.handleStatementSuccess(
+            link.name,
+            statementApprovalUrl,
+            user.external_id,
+          )
         } catch (ex) {
-          await this.handleSubscriptionError(user, ex)
+          await this.handleHealthStatementError(user, ex)
         }
       }
     } catch (ex) {
-      this.logger.error(`error while sending declaration: ${ex}`)
+      this.logger.error(`error while sending declarations: ${ex}`)
       await this.adminNotification.notify(
         `error sending health declarations: ${ex}`,
       )
     }
+  }
+
+  private async handleStatementSuccess(
+    linkName: string,
+    approvalUrl: string,
+    userExternalId: number,
+  ): Promise<void> {
+    const msg = this.statementApprovalMessage(linkName, approvalUrl)
+
+    await this.sendTelegramMessage(userExternalId, msg)
   }
 
   private isSchoolDay() {
@@ -77,18 +92,18 @@ export class DeclarationService {
     return
   }
 
-  private approvalMessage(name: string, approvalUrl: string): string {
+  private statementApprovalMessage(name: string, approvalUrl: string): string {
     const msg =
       'שלחתי את הצהרת הבריאות של ' + name + '. ' + 'הנה האישור:' + approvalUrl
     return msg
   }
 
-  private async handleSubscriptionError(
+  private async handleHealthStatementError(
     user: UserEntity,
     ex: Error,
   ): Promise<void> {
     await this.adminNotification.notify(
-      `could not send declaration for user(${user.external_id} - ${
+      `could not send health statement for user(${user.external_id} - ${
         user.first_name
       } ${user.last_name ? user.last_name : ''}). ${ex}`,
     )

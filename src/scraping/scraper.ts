@@ -6,7 +6,7 @@ import { Logger } from 'winston'
 @Injectable()
 export class Scraper {
   constructor(@Inject(WINSTON_MODULE_PROVIDER) private logger: Logger) {}
-  async sendDeclaration(url: string): Promise<string> {
+  async sendHealthStatement(url: string): Promise<string> {
     const browser = await this.newBrowser()
 
     try {
