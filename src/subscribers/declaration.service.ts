@@ -2,23 +2,26 @@ import { LinksRepository } from './../data/links.repository'
 import { AdminNotificationsService } from './../telegram/admin-notifications.service'
 import { Scraper } from './../scraper/scraper'
 import { UsersRepository } from '../data/users.repository'
-import { Injectable } from '@nestjs/common'
-import { Logger } from 'src/common/logger'
+import { Inject, Injectable } from '@nestjs/common'
+import { Logger } from 'winston'
 import { InjectBot, TelegrafProvider } from 'nestjs-telegraf'
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston'
 
 @Injectable()
 export class DeclarationService {
   constructor(
-    private readonly logger: Logger,
+    @Inject(WINSTON_MODULE_PROVIDER) private logger: Logger,
     private readonly usersRepo: UsersRepository,
     private readonly linksRepo: LinksRepository,
     private readonly scraper: Scraper,
     @InjectBot() private bot: TelegrafProvider,
     private readonly adminNotification: AdminNotificationsService,
-  ) {}
+  ) {
+    this.logger = logger.child({ loggerName: DeclarationService.name })
+  }
   async send() {
     if (new Date().getDay() > 4) {
-      this.logger.log('not a week day. skipping')
+      this.logger.info('not a week day. skipping')
       return
     }
 

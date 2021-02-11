@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common'
+import { Inject, Injectable } from '@nestjs/common'
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston'
 import * as puppeteer from 'puppeteer'
-import { Logger } from '../common/logger'
+import { Logger } from 'winston'
 
 @Injectable()
 export class Scraper {
-  constructor(private readonly logger: Logger) {}
+  constructor(@Inject(WINSTON_MODULE_PROVIDER) private logger: Logger) {}
   async sendDeclaration(url: string): Promise<string> {
     const browser = await this.newBrowser()
 

@@ -1,18 +1,27 @@
 import { AdminNotificationsService } from '../telegram/admin-notifications.service'
 import { ConfigService } from '@nestjs/config'
-import { Controller, Post, Req, UnauthorizedException } from '@nestjs/common'
-import { Logger } from 'src/common/logger'
+import {
+  Controller,
+  Inject,
+  Post,
+  Req,
+  UnauthorizedException,
+} from '@nestjs/common'
+import { Logger } from 'winston'
 import { Request } from 'express'
 import { DeclarationService } from './declaration.service'
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston'
 
 @Controller('declaration')
 export class DeclarationController {
   constructor(
     private readonly declarationService: DeclarationService,
-    private readonly logger: Logger,
+    @Inject(WINSTON_MODULE_PROVIDER) private logger: Logger,
     private readonly config: ConfigService,
     private readonly adminNotification: AdminNotificationsService,
-  ) {}
+  ) {
+    this.logger = logger.child({ loggerName: DeclarationController.name })
+  }
   @Post()
   async send(@Req() request: Request): Promise<void> {
     // TODO: move to middleware
