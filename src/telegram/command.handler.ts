@@ -1,5 +1,5 @@
 import { LinksRepository } from './../data/links.repository'
-import { Scraper } from './../scraper/scraper'
+import { Scraper } from '../scraping/scraper'
 import { User as TelegramUser } from 'telegram-typings'
 import { UsersRepository } from '../data/users.repository'
 import { UserEntity } from '../data/entities/user.entity'

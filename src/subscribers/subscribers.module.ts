@@ -1,5 +1,5 @@
 import { DeclarationService } from './declaration.service'
-import { ScraperModule } from './../scraper/scraper.module'
+import { ScraperModule } from '../scraping/scraper.module'
 import { TelegramModule } from './../telegram/telegram.module'
 import { Module } from '@nestjs/common'
 import { DeclarationController } from './declaration.controller'

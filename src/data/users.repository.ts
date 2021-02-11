@@ -6,6 +6,17 @@ import { UserEntity } from 'src/data/entities/user.entity'
 export class UsersRepository {
   constructor(@InjectKnex() private readonly knex: Knex) {}
 
+  async getAllUsers(): Promise<UserEntity[]> {
+    return await this.knex<UserEntity>('users').select('*')
+  }
+
+  async getByUserId(id: number) {
+    return await this.knex<UserEntity>('users')
+      .select('*')
+      .where('id', id)
+      .first()
+  }
+
   async getOrCreate(user: UserEntity): Promise<UserEntity> {
     let existingUser = await this.getByExternalId(user.external_id)
     if (!existingUser) {
