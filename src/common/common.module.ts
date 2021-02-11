@@ -24,5 +24,6 @@ import { NR_AGENT } from 'src/consts'
       useValue: newrelic,
     },
   ],
+  exports: [NR_AGENT],
 })
 export class CommonModule {}

@@ -29,7 +29,7 @@ export class Scraper {
 
       return await page.$eval('#linkLabel', el => el.textContent)
     } catch (ex) {
-      this.logger.error(`sendDeclaration failed: ${ex}`)
+      this.logger.error(`sendHealthStatement failed: ${ex}`)
       throw ex
     } finally {
       await browser.close()
