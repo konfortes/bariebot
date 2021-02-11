@@ -7,7 +7,7 @@ import { Logger } from 'winston'
 import { InjectBot, TelegrafProvider } from 'nestjs-telegraf'
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston'
 import { UserEntity } from 'src/data/entities/user.entity'
-// import { NR_AGENT } from 'src/consts'
+import { NR_AGENT } from 'src/consts'
 
 @Injectable()
 export class StatementService {
@@ -17,7 +17,8 @@ export class StatementService {
     private readonly linksRepo: LinksRepository,
     private readonly scraper: Scraper,
     @InjectBot() private bot: TelegrafProvider,
-    private readonly adminNotification: AdminNotificationsService, // @Inject(NR_AGENT) private metricsAgent,
+    private readonly adminNotification: AdminNotificationsService,
+    @Inject(NR_AGENT) private metricsAgent,
   ) {
     this.logger = logger.child({ loggerName: StatementService.name })
   }
@@ -47,7 +48,7 @@ export class StatementService {
             user.external_id,
           )
         } catch (ex) {
-          await this.handleHealthStatementError(user, ex)
+          await this.handleHealthStatementFailure(user, ex)
         }
       }
     } catch (ex) {
@@ -58,16 +59,6 @@ export class StatementService {
     }
   }
 
-  private async handleStatementSuccess(
-    linkName: string,
-    approvalUrl: string,
-    userExternalId: number,
-  ): Promise<void> {
-    const msg = this.statementApprovalMessage(linkName, approvalUrl)
-
-    await this.sendTelegramMessage(userExternalId, msg)
-  }
-
   private isSchoolDay() {
     let schoolDay = true
 
@@ -76,6 +67,24 @@ export class StatementService {
     }
 
     return schoolDay
+  }
+
+  private async handleStatementSuccess(
+    linkName: string,
+    approvalUrl: string,
+    userExternalId: number,
+  ): Promise<void> {
+    const msg = this.statementApprovalMessage(linkName, approvalUrl)
+
+    await this.sendTelegramMessage(userExternalId, msg)
+
+    await this.metricsAgent.incrementMetric('statement_sent_succeeded')
+  }
+
+  private statementApprovalMessage(name: string, approvalUrl: string): string {
+    const msg =
+      'שלחתי את הצהרת הבריאות של ' + name + '. ' + 'הנה האישור:' + approvalUrl
+    return msg
   }
 
   private async sendTelegramMessage(
@@ -92,13 +101,7 @@ export class StatementService {
     return
   }
 
-  private statementApprovalMessage(name: string, approvalUrl: string): string {
-    const msg =
-      'שלחתי את הצהרת הבריאות של ' + name + '. ' + 'הנה האישור:' + approvalUrl
-    return msg
-  }
-
-  private async handleHealthStatementError(
+  private async handleHealthStatementFailure(
     user: UserEntity,
     ex: Error,
   ): Promise<void> {
@@ -112,5 +115,7 @@ export class StatementService {
       user.external_id,
       'לא הצלחתי לשלוח את הצהרת הבריאות שלך היום.',
     )
+
+    await this.metricsAgent.incrementMetric('statement_sent_failed')
   }
 }

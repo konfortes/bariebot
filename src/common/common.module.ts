@@ -5,6 +5,8 @@ import { ConfigModule } from '@nestjs/config'
 import config from './config'
 import { WinstonModule } from 'nest-winston'
 import loggerConfig from './logging.config'
+import * as newrelic from 'newrelic'
+import { NR_AGENT } from 'src/consts'
 
 @Global()
 @Module({
@@ -16,5 +18,11 @@ import loggerConfig from './logging.config'
     }),
   ],
   controllers: [HealthController],
+  providers: [
+    {
+      provide: NR_AGENT,
+      useValue: newrelic,
+    },
+  ],
 })
 export class CommonModule {}
