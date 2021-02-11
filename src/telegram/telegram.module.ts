@@ -1,4 +1,4 @@
-import { ScraperModule } from './../scraper/scraper.module'
+import { ScraperModule } from '../scraping/scraper.module'
 import { DataModule } from './../data/data.module'
 import { CommandHandler } from './command.handler'
 import { Module } from '@nestjs/common'

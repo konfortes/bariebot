@@ -1,6 +1,6 @@
 import { LinksRepository } from './../data/links.repository'
 import { AdminNotificationsService } from './../telegram/admin-notifications.service'
-import { Scraper } from './../scraper/scraper'
+import { Scraper } from '../scraping/scraper'
 import { UsersRepository } from '../data/users.repository'
 import { Inject, Injectable } from '@nestjs/common'
 import { Logger } from 'winston'
