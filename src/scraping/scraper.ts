@@ -19,6 +19,9 @@ export class Scraper {
         '#cb_no_fever',
         '#cb_no_corona_signs',
         '#cb_no_corona_touch',
+        '#cb_no_change_in_smell',
+        '#cb_no_last48_fever',
+        '#cb_no_return_from_abroad',
       ]) {
         await page.click(id, { delay: 20 })
       }
