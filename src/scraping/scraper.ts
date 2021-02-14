@@ -14,17 +14,13 @@ export class Scraper {
       page.setViewport({ width: 1400, height: 700, deviceScaleFactor: 2 })
 
       await page.goto(url, { waitUntil: 'networkidle0' })
+      await page.waitForSelector('#sendBtn')
 
-      for (const id of [
-        '#cb_no_fever',
-        '#cb_no_corona_signs',
-        '#cb_no_corona_touch',
-        '#cb_no_change_in_smell',
-        '#cb_no_last48_fever',
-        '#cb_no_return_from_abroad',
-      ]) {
-        await page.click(id, { delay: 20 })
-      }
+      await page.evaluate(() => {
+        document
+          .querySelectorAll('input[type="checkbox"]')
+          .forEach((cb: HTMLElement) => cb.click())
+      })
 
       await page.click('#sendBtn', { delay: 30 })
 
