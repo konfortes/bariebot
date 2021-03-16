@@ -16,7 +16,7 @@
     "start:dev": "npm run migrate:dev && nest start --watch",
     "migration:create": "node_modules/.bin/knex  migrate:make --migrations-directory ./migrations",
     "migrate:dev": "node_modules/.bin/knex migrate:latest --migrations-directory ./migrations --client pg --connection postgresql://postgres:postgres@localhost:5433/bariebot",
-    "migrate": "node_modules/.bin/knex migrate:latest --migrations-directory ./migrations --client pg --connection ${DATABASE_URL}",
+    "migrate": "node_modules/.bin/knex migrate:latest --migrations-directory ./migrations --client pg --connection ${DATABASE_URL1}",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
