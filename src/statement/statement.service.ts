@@ -45,7 +45,7 @@ export class StatementService {
           await this.handleStatementSuccess(
             link.name,
             statementApprovalUrl,
-            user.external_id,
+            user,
           )
         } catch (ex) {
           await this.handleHealthStatementFailure(user, ex)
@@ -72,11 +72,13 @@ export class StatementService {
   private async handleStatementSuccess(
     linkName: string,
     approvalUrl: string,
-    userExternalId: number,
+    user: UserEntity,
   ): Promise<void> {
     const msg = this.statementApprovalMessage(linkName, approvalUrl)
 
-    await this.sendTelegramMessage(userExternalId, msg)
+    await this.sendTelegramMessage(user.external_id, msg)
+
+    await this.linksRepo.updateLastSent(user.id, new Date())
 
     await this.metricsAgent.incrementMetric('statement_sent_succeeded')
   }

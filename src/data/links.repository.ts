@@ -39,6 +39,12 @@ export class LinksRepository {
     return this.insertLink(userId, url, name)
   }
 
+  updateLastSent(userId: number, ts: Date = new Date()): Promise<void> {
+    return this.knex('links')
+      .where({ id: userId })
+      .update({ last_sent_at: ts })
+  }
+
   getByUserId(id: number): Promise<LinkEntity> {
     return this.knex('links')
       .where({ user_id: id })
